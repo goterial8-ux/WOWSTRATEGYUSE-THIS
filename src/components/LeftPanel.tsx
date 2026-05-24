@@ -6,9 +6,10 @@ interface LeftPanelProps {
   state: ProjectState;
   updateState: (partial: Partial<ProjectState>) => void;
   onResetProject: () => void;
+  saveStatus?: 'saved' | 'saving' | 'idle';
 }
 
-export function LeftPanel({ state, updateState, onResetProject }: LeftPanelProps) {
+export function LeftPanel({ state, updateState, onResetProject, saveStatus }: LeftPanelProps) {
   
   return (
     <aside className="w-[280px] h-full border-r border-slate-200 bg-white flex flex-col pt-4 overflow-hidden shrink-0">
@@ -16,9 +17,16 @@ export function LeftPanel({ state, updateState, onResetProject }: LeftPanelProps
         <h2 className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-2">
           Project Control
         </h2>
-        <button className="p-1 rounded-none text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors" title="Save Project Settings">
-          <Save className="w-4 h-4" />
-        </button>
+        <div className="flex items-center gap-2">
+          {saveStatus && saveStatus !== 'idle' && (
+            <span className={`text-[9px] font-bold uppercase transition-all duration-300 ${saveStatus === 'saving' ? 'text-blue-500 animate-pulse' : 'text-emerald-500 opacity-60'}`}>
+              {saveStatus === 'saving' ? 'Saving...' : 'Saved'}
+            </span>
+          )}
+          <button className="p-1 rounded-none text-slate-400 hover:text-slate-900 hover:bg-slate-50 transition-colors" title="Save Project Settings">
+            <Save className="w-4 h-4" />
+          </button>
+        </div>
       </div>
       
       <div className="p-4 overflow-y-auto flex-1 flex flex-col gap-5">

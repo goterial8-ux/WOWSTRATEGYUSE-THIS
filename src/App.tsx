@@ -11,7 +11,10 @@ export default function App() {
     const saved = localStorage.getItem('studio_writer_project');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Ensure registry is always present from template even if old state didn't have it
+        if (!parsed.promptRegistry) parsed.promptRegistry = INITIAL_STATE.promptRegistry;
+        return parsed;
       } catch (e) {
         console.error("Failed to parse saved state", e);
         return INITIAL_STATE;
@@ -19,20 +22,28 @@ export default function App() {
     }
     return INITIAL_STATE;
   });
-  const [currentStageId, setCurrentStageId] = useState<StageId>('raw_idea');
+  const [currentStageId, setCurrentStageId] = useState<StageId>(() => {
+    return (localStorage.getItem('studio_writer_stage') as StageId) || 'raw_idea';
+  });
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBatchGenerating, setIsBatchGenerating] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
 
   useEffect(() => {
+    setSaveStatus('saving');
     localStorage.setItem('studio_writer_project', JSON.stringify(state));
-  }, [state]);
+    localStorage.setItem('studio_writer_stage', currentStageId);
+    const timer = setTimeout(() => setSaveStatus('saved'), 500);
+    return () => clearTimeout(timer);
+  }, [state, currentStageId]);
 
   const handleResetProject = () => {
     if (window.confirm("Are you sure you want to start a new project? This will clear all current work.")) {
       localStorage.removeItem('studio_writer_project');
+      localStorage.removeItem('studio_writer_stage');
       setState(INITIAL_STATE);
       setCurrentStageId('raw_idea');
     }
@@ -487,6 +498,7 @@ export default function App() {
           state={state} 
           updateState={updateState}
           onResetProject={handleResetProject}
+          saveStatus={saveStatus}
         />
         
         <div className="flex-1 flex flex-col min-w-0">
