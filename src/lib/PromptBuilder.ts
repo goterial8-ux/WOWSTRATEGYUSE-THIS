@@ -43,7 +43,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
       stage1Prompt = stage1Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
       stage1Prompt = stage1Prompt.replace('{{RAW_IDEA}}', state.rawIdea || 'None');
       stage1Prompt = stage1Prompt.replace('{{GENRE}}', state.genre || 'None');
-      stage1Prompt = stage1Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+      stage1Prompt = stage1Prompt.replace('{{OUTPUT_LANGUAGE}}', 'Russian');
       stage1Prompt = stage1Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage1Prompt = stage1Prompt.replace('{{STYLE_NOTES}}', state.styleNotes || 'None');
       stage1Prompt = stage1Prompt.replace('{{FORBIDDEN_ELEMENTS}}', state.forbiddenElements || 'None');
@@ -57,7 +57,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
       stage2Prompt = stage2Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');
       stage2Prompt = stage2Prompt.replace('{{STAGE_ONE_HANDOFF}}', 'Refer to the Handoff Summary in the Developed Idea above.');
       stage2Prompt = stage2Prompt.replace('{{GENRE}}', state.genre || 'None');
-      stage2Prompt = stage2Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+      stage2Prompt = stage2Prompt.replace('{{OUTPUT_LANGUAGE}}', 'Russian');
       stage2Prompt = stage2Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage2Prompt = stage2Prompt.replace('{{STYLE_NOTES}}', state.styleNotes || 'None');
       stage2Prompt = stage2Prompt.replace('{{FORBIDDEN_ELEMENTS}}', state.forbiddenElements || 'None');
@@ -73,7 +73,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
       stage3Prompt = stage3Prompt.replace('{{STORY_CONTRACT}}', state.storyContract || 'None');
       stage3Prompt = stage3Prompt.replace('{{CHARACTER_BIBLE}}', state.characterBible || 'None');
       stage3Prompt = stage3Prompt.replace('{{GENRE}}', state.genre || 'None');
-      stage3Prompt = stage3Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+      stage3Prompt = stage3Prompt.replace('{{OUTPUT_LANGUAGE}}', 'Russian');
       stage3Prompt = stage3Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage3Prompt = stage3Prompt.replace('{{STYLE_NOTES}}', state.styleNotes || 'None');
       stage3Prompt = stage3Prompt.replace('{{FORBIDDEN_ELEMENTS}}', state.forbiddenElements || 'None');
@@ -88,7 +88,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
     case 'scene_cards': 
       let stage4Prompt = state.promptRegistry.stageFourSceneCardsPrompt;
       stage4Prompt = stage4Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
-      stage4Prompt = stage4Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+      stage4Prompt = stage4Prompt.replace('{{OUTPUT_LANGUAGE}}', 'Russian');
       stage4Prompt = stage4Prompt.replace('{{GENRE}}', state.genre || 'None');
       stage4Prompt = stage4Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage4Prompt = stage4Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');
@@ -110,7 +110,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
     case 'script_writer': 
       let stage5Prompt = state.promptRegistry.stageFiveScriptWriterPrompt;
       stage5Prompt = stage5Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
-      stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+      stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', 'English');
       stage5Prompt = stage5Prompt.replace('{{GENRE}}', state.genre || 'None');
       stage5Prompt = stage5Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage5Prompt = stage5Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');
@@ -146,7 +146,7 @@ export function buildPartPrompt(partNumber: number, state: ProjectState): string
   
   let stage5Prompt = state.promptRegistry.stageFiveScriptWriterPrompt;
   stage5Prompt = stage5Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
-  stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'English');
+  stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', 'English');
   stage5Prompt = stage5Prompt.replace('{{GENRE}}', state.genre || 'None');
   stage5Prompt = stage5Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
   stage5Prompt = stage5Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');
@@ -187,9 +187,10 @@ export function buildPartPrompt(partNumber: number, state: ProjectState): string
 }
 
 export function buildSupervisorPrompt(stageId: StageId, output: string, state: ProjectState): string {
-  return `=== AI SUPERVISOR ===\n${state.promptRegistry.aiSupervisorPrompt}\n\nSTAGE: ${stageId}\n\n=== OUTPUT TO CHECK ===\n${output}`;
+  return `=== AI SUPERVISOR ===\n${state.promptRegistry.aiSupervisorPrompt}\n\nSTAGE: ${stageId}\n\n=== OUTPUT TO CHECK ===\n${output}\n\nIMPORTANT: Provide your analysis and report in Russian.`;
 }
 
 export function buildRepairPrompt(stageId: StageId, brokenOutput: string, report: any, state: ProjectState): string {
-  return `=== REPAIR ===\n${state.promptRegistry.repairPrompt}\n\nBROKEN OUTPUT:\n${brokenOutput}\n\nSUPERVISOR REPORT:\n${JSON.stringify(report, null, 2)}`;
+  const lang = stageId === 'script_writer' ? 'English' : 'Russian';
+  return `=== REPAIR ===\n${state.promptRegistry.repairPrompt}\n\nBROKEN OUTPUT:\n${brokenOutput}\n\nSUPERVISOR REPORT:\n${JSON.stringify(report, null, 2)}\n\nIMPORTANT: Output the repaired version in ${lang}. Ensure all structural rules are preserved.`;
 }
