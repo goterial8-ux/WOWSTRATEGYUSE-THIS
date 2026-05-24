@@ -113,109 +113,58 @@ interface ModelAttempt {
   };
 }
 
-async function generateContentWithFallback(prompt: string, expectJson: boolean = false, stageId?: string) {
+async function generateContent(prompt: string, expectJson: boolean = false, stageId?: string) {
   if (!ai) {
     throw new Error("Missing GOOGLE_CLOUD_PROJECT or GOOGLE_CLOUD_LOCATION for Vertex AI.");
   }
 
-  // Resolve custom model attempts matching the user requirements
-  let attempts: ModelAttempt[] = [];
+  // Define model and config based on user's specific stage requirements
+  let modelName = "gemini-3.5-flash"; // Default
+  let thinkingLevel: "HIGH" | "LOW" | "MINIMAL" | undefined = undefined;
 
   if (stageId === "raw_idea" || stageId === "story_dna") {
-    attempts = [
-      { model: "gemini-3.5-flash" },
-      { model: "gemini-3-flash-preview" },
-      { model: "gemini-2.5-flash" },
-    ];
+    modelName = "gemini-3.5-flash";
   } else if (stageId === "story_plan") {
-    attempts = [
-      { model: "gemini-3.1-pro-preview", config: { thinkingConfig: { thinkingLevel: "HIGH" } } },
-      { model: "gemini-3.1-pro-preview" },
-      { model: "gemini-2.5-pro" },
-      { model: "gemini-2.5-flash" },
-    ];
+    modelName = "gemini-3.1-pro-preview";
+    thinkingLevel = "HIGH";
   } else if (stageId === "scene_cards") {
-    attempts = [
-      { model: "gemini-2.5-pro" },
-      { model: "gemini-3.1-pro-preview" },
-      { model: "gemini-3.5-flash" },
-      { model: "gemini-2.5-flash" },
-    ];
+    modelName = "gemini-2.5-pro";
   } else if (stageId === "script_writer") {
-    attempts = [
-      { model: "gemini-3.1-pro-preview", config: { thinkingConfig: { thinkingLevel: "HIGH" } } },
-      { model: "gemini-3.1-pro-preview" },
-      { model: "gemini-2.5-pro" },
-      { model: "gemini-2.5-flash" },
-    ];
-  } else {
-    // Default fallback model list (e.g. supervisor or clean export stages)
-    attempts = [
-      { model: "gemini-3.5-flash" },
-      { model: "gemini-3-flash-preview" },
-      { model: "gemini-2.5-flash" },
-    ];
+    modelName = "gemini-3.1-pro-preview";
+    thinkingLevel = "HIGH";
+  } else if (stageId === "supervisor") {
+    modelName = "gemini-3.5-flash";
   }
 
-  let lastError: any = null;
-
-  for (const attempt of attempts) {
-    try {
-      const modeDesc = attempt.config?.thinkingConfig ? " (Thinking Configured: HIGH)" : "";
-      console.log(`[Vertex AI] Trying model: ${attempt.model}${modeDesc} for stage: ${stageId || "default"}`);
-      
-      const config: any = {};
-      if (expectJson) {
-        config.responseMimeType = "application/json";
-      }
-      if (attempt.config) {
-        config.thinkingConfig = attempt.config.thinkingConfig;
-      }
-
-      const response = await ai.models.generateContent({
-        model: attempt.model,
-        contents: prompt,
-        config: config
-      });
-
-      console.log(`[Vertex AI] Success with model: ${attempt.model} for stage: ${stageId || "default"}`);
-      return response.text || "";
-    } catch (err: any) {
-      console.warn(`[Vertex AI] Error with model ${attempt.model} for stage: ${stageId || "default"}:`, err.message || err);
-      lastError = err;
-      
-      const errMsg = (err.message || "").toLowerCase();
-      const isTransientError = 
-        errMsg.includes("quota") ||
-        errMsg.includes("limit") ||
-        errMsg.includes("exhausted") ||
-        errMsg.includes("429") ||
-        errMsg.includes("503") ||
-        errMsg.includes("unavailable") ||
-        errMsg.includes("try again") ||
-        errMsg.includes("overloaded") ||
-        errMsg.includes("rate");
-
-      if (isTransientError) {
-        console.log(`[Vertex AI] Transient error/billing limit detected, attempting fallback...`);
-        continue;
-      } else {
-        console.log(`[Vertex AI] General error detected, attempting fallback anyway to be safe...`);
-        continue;
-      }
+  try {
+    const modeDesc = thinkingLevel ? ` (Thinking: ${thinkingLevel})` : "";
+    console.log(`[Vertex AI] Requesting ${modelName}${modeDesc} for stage: ${stageId || "default"}`);
+    
+    const config: any = {};
+    if (expectJson) {
+      config.responseMimeType = "application/json";
     }
-  }
+    if (thinkingLevel) {
+      config.thinkingConfig = { thinkingLevel };
+    }
 
-  throw new Error(`All configured models failed. Last error: ${lastError?.message || lastError}`);
+    const response = await ai.models.generateContent({
+      model: modelName,
+      contents: prompt,
+      config: config
+    });
+
+    console.log(`[Vertex AI] Success with ${modelName} for ${stageId || "default"}`);
+    return response.text || "";
+  } catch (err: any) {
+    console.error(`[Vertex AI Error] ${modelName} failed:`, err.message || err);
+    throw err;
+  }
 }
 
 // Unified generate/RPC route
 async function handleGenerate(req: express.Request, res: express.Response) {
   console.log("POST /api/generate called");
-  console.log("Vertex project:", process.env.GOOGLE_CLOUD_PROJECT || "project-41ceb22a-f998-416d-98b");
-  console.log("Vertex location:", process.env.GOOGLE_CLOUD_LOCATION || "global");
-  console.log("Use Vertex:", process.env.GOOGLE_GENAI_USE_VERTEXAI || "True");
-
   const { prompt, type, stageId } = req.body;
 
   if (!prompt) {
@@ -224,7 +173,7 @@ async function handleGenerate(req: express.Request, res: express.Response) {
 
   try {
     const isSupervisor = type === "supervisor";
-    const textOutput = await generateContentWithFallback(prompt, isSupervisor, stageId);
+    const textOutput = await generateContent(prompt, isSupervisor, isSupervisor ? "supervisor" : stageId);
 
     let parsedResult = null;
     if (isSupervisor) {
@@ -237,7 +186,6 @@ async function handleGenerate(req: express.Request, res: express.Response) {
       parsed: parsedResult,
     });
   } catch (error: any) {
-    console.error("[Vertex AI Error] ", error);
     return res.status(500).json({
       success: false,
       error: error.message || "Generation failed"
