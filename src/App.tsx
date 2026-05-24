@@ -323,12 +323,18 @@ export default function App() {
   };
   
   const handleInitScriptParts = () => {
-    updateState({
-      scriptParts: [
-        {
-          partNumber: 1,
-          partTitle: 'The Setup',
-          sourceSceneCards: 'Scene 1-3...',
+    // Try to parse parts from storyPlan
+    const parts: ScriptPart[] = [];
+    const partMatch = state.storyPlan.match(/Part\s+(\d+):\s+([^\n]+)/gi);
+    
+    if (partMatch && partMatch.length > 0) {
+      partMatch.forEach((m, idx) => {
+        const titleMatch = m.match(/Part\s+\d+:\s+([^\n]+)/i);
+        const title = titleMatch ? titleMatch[1].trim() : `Part ${idx + 1}`;
+        parts.push({
+          partNumber: idx + 1,
+          partTitle: title,
+          sourceSceneCards: `Scenes for ${title}`,
           draftText: '',
           status: 'not_started',
           supervisorReport: null,
@@ -337,11 +343,15 @@ export default function App() {
           hasGenerationResidue: false,
           hasDuplicateBlocks: false,
           avatarCount: 0
-        },
-        {
-          partNumber: 2,
-          partTitle: 'The Confrontation',
-          sourceSceneCards: 'Scene 4-6...',
+        });
+      });
+    } else {
+      // Fallback to 15 parts if no plan found (as per master prompt expectations)
+      for (let i = 1; i <= 15; i++) {
+        parts.push({
+          partNumber: i,
+          partTitle: i === 1 ? 'Introduction & Hook' : `Part ${i}`,
+          sourceSceneCards: `Scenes for Part ${i}`,
           draftText: '',
           status: 'not_started',
           supervisorReport: null,
@@ -350,9 +360,11 @@ export default function App() {
           hasGenerationResidue: false,
           hasDuplicateBlocks: false,
           avatarCount: 0
-        }
-      ]
-    });
+        });
+      }
+    }
+
+    updateState({ scriptParts: parts });
     updateStageStatus('script_writer', 'generated');
   };
 

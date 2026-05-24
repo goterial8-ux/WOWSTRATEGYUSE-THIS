@@ -110,7 +110,7 @@ export function buildPrompt(stageId: StageId, state: ProjectState): string {
     case 'script_writer': 
       let stage5Prompt = state.promptRegistry.stageFiveScriptWriterPrompt;
       stage5Prompt = stage5Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
-      stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', 'English');
+      stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'Russian');
       stage5Prompt = stage5Prompt.replace('{{GENRE}}', state.genre || 'None');
       stage5Prompt = stage5Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
       stage5Prompt = stage5Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');
@@ -146,7 +146,7 @@ export function buildPartPrompt(partNumber: number, state: ProjectState): string
   
   let stage5Prompt = state.promptRegistry.stageFiveScriptWriterPrompt;
   stage5Prompt = stage5Prompt.replace('{{PROJECT_TITLE}}', state.projectTitle || 'None');
-  stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', 'English');
+  stage5Prompt = stage5Prompt.replace('{{OUTPUT_LANGUAGE}}', state.language || 'Russian');
   stage5Prompt = stage5Prompt.replace('{{GENRE}}', state.genre || 'None');
   stage5Prompt = stage5Prompt.replace('{{TARGET_LENGTH}}', state.targetLength || 'None');
   stage5Prompt = stage5Prompt.replace('{{DEVELOPED_IDEA}}', state.developedIdea || 'None');

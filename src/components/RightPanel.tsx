@@ -212,6 +212,7 @@ export function RightPanel({
              onGenerateAllParts={onGenerateAllParts}
              onStopBatchGeneration={onStopBatchGeneration}
              onClearAllParts={onClearAllParts}
+             onInitScriptParts={onInitScriptParts}
              onClearPart={onClearPart}
              isBatchGenerating={isBatchGenerating}
              onCheckPart={onCheckPart}

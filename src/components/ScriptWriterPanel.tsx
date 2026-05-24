@@ -9,6 +9,7 @@ interface ScriptWriterPanelProps {
   onGenerateAllParts: () => void;
   onStopBatchGeneration: () => void;
   onClearAllParts: () => void;
+  onInitScriptParts: () => void;
   onClearPart: (index: number) => void;
   isBatchGenerating: boolean;
   onCheckPart: (index: number) => void;
@@ -23,6 +24,7 @@ export function ScriptWriterPanel({
   onGenerateAllParts,
   onStopBatchGeneration,
   onClearAllParts,
+  onInitScriptParts,
   onClearPart,
   isBatchGenerating,
   onCheckPart,
@@ -73,6 +75,13 @@ export function ScriptWriterPanel({
               className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all border border-slate-200"
             >
               <Eraser className="w-3 h-3" /> Clear All
+            </button>
+            <button 
+              onClick={onInitScriptParts}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-[11px] font-bold uppercase tracking-wider rounded-sm transition-all border border-slate-200"
+              title="Sync parts list with Story Plan"
+            >
+              <RefreshCw className="w-3 h-3" /> Sync with Plan
             </button>
           </div>
         </div>
