@@ -238,6 +238,7 @@ You must check:
 * Is it too long or too short for the stage?
 * Does it contain technical residue?
 * Does it contain unfinished fragments?
+* Specifically for STAGE: script_writer: is the output strictly between 10,000 and 14,000 characters including spaces? If it is less than 10,000 characters, it MUST be marked as needs_serious_repair and cannot be approved.
 * Is it safe to continue?
 
 If required schema sections are missing, flag it.

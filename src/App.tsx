@@ -325,16 +325,23 @@ export default function App() {
   const handleInitScriptParts = () => {
     // Try to parse parts from storyPlan
     const parts: ScriptPart[] = [];
-    const partMatch = state.storyPlan.match(/Part\s+(\d+):\s+([^\n]+)/gi);
     
-    if (partMatch && partMatch.length > 0) {
-      partMatch.forEach((m, idx) => {
-        const titleMatch = m.match(/Part\s+\d+:\s+([^\n]+)/i);
-        const title = titleMatch ? titleMatch[1].trim() : `Part ${idx + 1}`;
+    // 1. Search for a structured list of parts (supports English/Russian labels and various delimiters)
+    // Looking for lines like "Part 1: Title" or "Часть 1. Название"
+    const partListRegex = /(?:Part|Часть|Stage|Этап)\s*(\d+)\s*[:.-]\s*([^\n]+)/gi;
+    let match;
+    const matches: { number: number, title: string }[] = [];
+    
+    while ((match = partListRegex.exec(state.storyPlan)) !== null) {
+      matches.push({ number: parseInt(match[1]), title: match[2].trim() });
+    }
+    
+    if (matches.length > 0) {
+      matches.forEach((m) => {
         parts.push({
-          partNumber: idx + 1,
-          partTitle: title,
-          sourceSceneCards: `Scenes for ${title}`,
+          partNumber: m.number,
+          partTitle: m.title,
+          sourceSceneCards: `Scenes for ${m.title}`,
           draftText: '',
           status: 'not_started',
           supervisorReport: null,
@@ -346,8 +353,21 @@ export default function App() {
         });
       });
     } else {
-      // Fallback to 15 parts if no plan found (as per master prompt expectations)
-      for (let i = 1; i <= 15; i++) {
+      // 2. Try to find explicit count: "Number of Parts: X" or "Количество частей: X"
+      const countRegex = /(?:Number of Parts|Количество частей|Parts|Частей)\s*[:.-]?\s*(\d+|Девять|Восемь|Семь|Шесть|Пять|Четыре|Три|Два|Один)/i;
+      const countMatch = state.storyPlan.match(countRegex);
+      
+      let numParts = 15; // default fallback if everything fails
+      if (countMatch) {
+         const val = countMatch[1].toLowerCase();
+         const russianMap: Record<string, number> = {
+           'один': 1, 'два': 2, 'три': 3, 'четыре': 4, 'пять': 5, 
+           'шесть': 6, 'семь': 7, 'восемь': 8, 'девять': 9, 'десять': 10
+         };
+         numParts = russianMap[val] || parseInt(val) || 15;
+      }
+      
+      for (let i = 1; i <= numParts; i++) {
         parts.push({
           partNumber: i,
           partTitle: i === 1 ? 'Introduction & Hook' : `Part ${i}`,

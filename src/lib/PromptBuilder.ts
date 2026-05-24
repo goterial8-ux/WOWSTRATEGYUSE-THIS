@@ -192,5 +192,6 @@ export function buildSupervisorPrompt(stageId: StageId, output: string, state: P
 
 export function buildRepairPrompt(stageId: StageId, brokenOutput: string, report: any, state: ProjectState): string {
   const lang = stageId === 'script_writer' ? 'English' : 'Russian';
-  return `=== REPAIR ===\n${state.promptRegistry.repairPrompt}\n\nBROKEN OUTPUT:\n${brokenOutput}\n\nSUPERVISOR REPORT:\n${JSON.stringify(report, null, 2)}\n\nIMPORTANT: Output the repaired version in ${lang}. Ensure all structural rules are preserved.`;
+  const lengthConstraint = stageId === 'script_writer' ? "IMPORTANT: The repaired output MUST be between 10,000 and 14,000 characters including spaces. If the previous version was too short, you MUST expand the scenes, internal monologues, and atmosphere to reach this target length." : "";
+  return `=== REPAIR ===\n${state.promptRegistry.repairPrompt}\n\nBROKEN OUTPUT:\n${brokenOutput}\n\nSUPERVISOR REPORT:\n${JSON.stringify(report, null, 2)}\n\n${lengthConstraint}\n\nIMPORTANT: Output the repaired version in ${lang}. Ensure all structural rules are preserved.`;
 }
