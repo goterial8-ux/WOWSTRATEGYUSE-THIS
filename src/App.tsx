@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { INITIAL_STATE, ProjectState, StageId, StageStatus, SupervisorReport, CleanExportSettings, ScriptPart, STAGES } from './types';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/LeftPanel';
@@ -28,6 +28,11 @@ export default function App() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBatchGenerating, setIsBatchGenerating] = useState(false);
   const [stopRequested, setStopRequested] = useState(false);
+  const stopRequestedRef = useRef(false);
+
+  useEffect(() => {
+    stopRequestedRef.current = stopRequested;
+  }, [stopRequested]);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'idle'>('idle');
@@ -328,7 +333,8 @@ export default function App() {
     
     // 1. Search for a structured list of parts (supports English/Russian labels and various delimiters)
     // Looking for lines like "Part 1: Title" or "Часть 1. Название"
-    const partListRegex = /(?:Part|Часть|Stage|Этап)\s*(\d+)\s*[:.-]\s*([^\n]+)/gi;
+    // Using a more restrictive regex to avoid matching "Part" in descriptions
+    const partListRegex = /(?:^|\n)\s*(?:Part|Часть|Stage|Этап)\s*(\d+)\s*[:.-]\s*([^\n]+)/gi;
     let match;
     const matches: { number: number, title: string }[] = [];
     
@@ -445,30 +451,26 @@ export default function App() {
   const handleGenerateAllParts = async () => {
     setIsBatchGenerating(true);
     setStopRequested(false);
+    stopRequestedRef.current = false;
 
+    // We use a local index to avoid issues with stale state in the loop
     for (let i = 0; i < state.scriptParts.length; i++) {
-        // Use latest state to check for stop request
-        let shouldStop = false;
-        setStopRequested(current => {
-            if (current) shouldStop = true;
-            return current;
-        });
+        if (stopRequestedRef.current) break;
         
-        if (shouldStop) break;
-        
-        // Skip already generated parts unless starting from scratch? 
-        // Actually the user asked to "continue from where we stopped", 
-        // so we skip parts that have draft text.
-        if (state.scriptParts[i].draftText && state.scriptParts[i].draftText.length > 0) {
+        // We need to re-fetch the latest part data to check if it's already generated
+        // (Since the loop started with a snapshot of state)
+        const currentParts = state.scriptParts; 
+        if (currentParts[i].draftText && currentParts[i].draftText.length > 0) {
             continue;
         }
 
         const success = await handleGeneratePart(i);
-        if (!success) break; // Stop on error
+        if (!success || stopRequestedRef.current) break;
     }
 
     setIsBatchGenerating(false);
     setStopRequested(false);
+    stopRequestedRef.current = false;
   };
 
   const handleStopBatchGeneration = () => {
