@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { INITIAL_STATE, ProjectState, StageId, StageStatus, SupervisorReport, CleanExportSettings, ScriptPart, STAGES } from './types';
 import { TopBar } from './components/TopBar';
 import { LeftPanel } from './components/LeftPanel';
@@ -7,11 +7,43 @@ import { SupervisorPanel } from './components/SupervisorPanel';
 import { Bug, X } from 'lucide-react';
 
 export default function App() {
-  const [state, setState] = useState<ProjectState>(INITIAL_STATE);
+  const [state, setState] = useState<ProjectState>(() => {
+    const saved = localStorage.getItem('studio_writer_project');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse saved state", e);
+        return INITIAL_STATE;
+      }
+    }
+    return INITIAL_STATE;
+  });
   const [currentStageId, setCurrentStageId] = useState<StageId>('raw_idea');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isBatchGenerating, setIsBatchGenerating] = useState(false);
+  const [stopRequested, setStopRequested] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [showDebug, setShowDebug] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('studio_writer_project', JSON.stringify(state));
+  }, [state]);
+
+  const handleResetProject = () => {
+    if (window.confirm("Are you sure you want to start a new project? This will clear all current work.")) {
+      localStorage.removeItem('studio_writer_project');
+      setState(INITIAL_STATE);
+      setCurrentStageId('raw_idea');
+    }
+  };
+
+  const handleUnlockStage = (stageId: StageId) => {
+    updateStageStatus(stageId, 'generated');
+    updateState({
+      lockedData: { ...state.lockedData, [stageId]: false }
+    });
+  };
 
   const updateState = (partial: Partial<ProjectState>) => {
     setState(prev => ({ ...prev, ...partial }));
@@ -313,58 +345,100 @@ export default function App() {
     updateStageStatus('script_writer', 'generated');
   };
 
-  const handleGeneratePart = (index: number) => {
-    import('./lib/PromptBuilder').then(({ buildPartPrompt }) => {
+  const handleGeneratePart = async (index: number) => {
+    try {
+      const { buildPartPrompt } = await import('./lib/PromptBuilder');
       const partNum = state.scriptParts[index].partNumber;
       const promptUsed = buildPartPrompt(partNum, state);
       
       setIsGenerating(true);
-      fetch('/api/generate', {
+      const response = await fetch('/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: promptUsed, type: 'text', stageId: 'script_writer' })
-      })
-      .then(async response => {
-        const raw = await response.text();
-        try {
-          return JSON.parse(raw);
-        } catch {
-          console.error("Backend returned non-JSON:", raw);
-          throw new Error("Backend returned HTML/non-JSON. Check API route.");
-        }
-      })
-      .then(data => {
-        if (!data.success) {
-          throw new Error(data.error || 'Part generation failed');
-        }
-        const textOutput = data.text;
-        
-        const newHistoryEntry = {
-            id: Date.now().toString(),
-            stageId: 'script_writer',
-            promptUsed,
-            inputDataSummary: `Generated for Script Part ${partNum}`,
-            outputPreview: textOutput.substring(0, 300) + (textOutput.length > 300 ? '...' : ''),
-            createdAt: Date.now(),
-            supervisorStatus: null,
-            repairApplied: false,
-            lockedStatus: false
-        };
-        
-        updateScriptPart(index, { status: 'generated', draftText: textOutput, wordOrCharacterCount: textOutput.length });
-        updateState({
-            promptHistory: [newHistoryEntry, ...state.promptHistory]
-        });
-      })
-      .catch(err => {
-        console.error("Part generation failed:", err);
-        setWarningMessage(err.message || 'Error occurred during part generation.');
-        setTimeout(() => setWarningMessage(null), 5000);
-      })
-      .finally(() => {
-        setIsGenerating(false);
       });
-    });
+
+      const raw = await response.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error("Backend returned HTML/non-JSON. Check API route.");
+      }
+
+      if (!data.success) {
+        throw new Error(data.error || 'Part generation failed');
+      }
+
+      const textOutput = data.text;
+      
+      const newHistoryEntry = {
+          id: Date.now().toString(),
+          stageId: 'script_writer',
+          promptUsed,
+          inputDataSummary: `Generated for Script Part ${partNum}`,
+          outputPreview: textOutput.substring(0, 300) + (textOutput.length > 300 ? '...' : ''),
+          createdAt: Date.now(),
+          supervisorStatus: null,
+          repairApplied: false,
+          lockedStatus: false
+      };
+      
+      updateScriptPart(index, { status: 'generated', draftText: textOutput, wordOrCharacterCount: textOutput.length });
+      updateState({
+          promptHistory: [newHistoryEntry, ...state.promptHistory]
+      });
+      return true;
+    } catch (err: any) {
+      console.error("Part generation failed:", err);
+      setWarningMessage(err.message || 'Error occurred during part generation.');
+      setTimeout(() => setWarningMessage(null), 5000);
+      return false;
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateAllParts = async () => {
+    setIsBatchGenerating(true);
+    setStopRequested(false);
+
+    for (let i = 0; i < state.scriptParts.length; i++) {
+        // Use latest state to check for stop request
+        let shouldStop = false;
+        setStopRequested(current => {
+            if (current) shouldStop = true;
+            return current;
+        });
+        
+        if (shouldStop) break;
+        
+        // Skip already generated parts unless starting from scratch? 
+        // Actually the user asked to "continue from where we stopped", 
+        // so we skip parts that have draft text.
+        if (state.scriptParts[i].draftText && state.scriptParts[i].draftText.length > 0) {
+            continue;
+        }
+
+        const success = await handleGeneratePart(i);
+        if (!success) break; // Stop on error
+    }
+
+    setIsBatchGenerating(false);
+    setStopRequested(false);
+  };
+
+  const handleStopBatchGeneration = () => {
+    setStopRequested(true);
+  };
+
+  const handleClearAllParts = () => {
+    const cleared = state.scriptParts.map(p => ({ ...p, draftText: '', status: 'not_started' as const, wordOrCharacterCount: 0 }));
+    updateState({ scriptParts: cleared, fullScript: '' });
+  };
+
+  const handleClearPart = (index: number) => {
+    updateScriptPart(index, { draftText: '', status: 'not_started', wordOrCharacterCount: 0 });
   };
   
   const handleCheckPart = (index: number) => {
@@ -412,6 +486,7 @@ export default function App() {
         <LeftPanel 
           state={state} 
           updateState={updateState}
+          onResetProject={handleResetProject}
         />
         
         <div className="flex-1 flex flex-col min-w-0">
@@ -423,6 +498,7 @@ export default function App() {
             updateStageContent={(content) => setStageContent(currentStageId, content)}
             onGenerate={handleGenerate}
             onApproveAndLock={handleApproveAndLock}
+            onUnlockStage={() => handleUnlockStage(currentStageId)}
             onSendToNext={handleSendToNext}
             exportSettings={state.cleanExportSettings}
             updateExportSettings={updateExportSettings}
@@ -430,6 +506,11 @@ export default function App() {
             updateScriptPart={updateScriptPart}
             onInitScriptParts={handleInitScriptParts}
             onGeneratePart={handleGeneratePart}
+            onGenerateAllParts={handleGenerateAllParts}
+            onStopBatchGeneration={handleStopBatchGeneration}
+            onClearAllParts={handleClearAllParts}
+            onClearPart={handleClearPart}
+            isBatchGenerating={isBatchGenerating}
             onCheckPart={handleCheckPart}
             onAssembleScript={handleAssembleScript}
           />

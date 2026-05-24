@@ -5903,6 +5903,13 @@ Do not let Arin understand the full underground city too early. Do not make the 
 `,
   stageFiveScriptWriterPrompt: `You are STAGE FIVE — SCRIPT WRITER.
 
+CRITICAL: FAST HOOK REQUIREMENT
+If this is PART ONE, you must start with a "HARD HOOK". 
+The first 10 seconds of the script MUST grab the audience by the throat.
+- Jump directly into the center of the conflict or the highest point of mystery.
+- Do not start with "Once upon a time" or slow worldbuilding.
+- Force the viewer to ask a question they must stay to answer.
+
 Your task is to write the final long-form YouTube recap / drama / manhwa-style script from the approved Story Contract, approved Story Plan, and approved Scene Cards.
 
 This is the main writing stage.

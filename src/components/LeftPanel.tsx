@@ -1,13 +1,14 @@
 import React from 'react';
 import { ProjectState } from '../types';
-import { Settings, FileText, Anchor, Save, Download, Upload, Server } from 'lucide-react';
+import { Settings, FileText, Anchor, Save, Download, Upload, Server, RefreshCw } from 'lucide-react';
 
 interface LeftPanelProps {
   state: ProjectState;
   updateState: (partial: Partial<ProjectState>) => void;
+  onResetProject: () => void;
 }
 
-export function LeftPanel({ state, updateState }: LeftPanelProps) {
+export function LeftPanel({ state, updateState, onResetProject }: LeftPanelProps) {
   
   return (
     <aside className="w-[280px] h-full border-r border-slate-200 bg-white flex flex-col pt-4 overflow-hidden shrink-0">
@@ -134,6 +135,12 @@ export function LeftPanel({ state, updateState }: LeftPanelProps) {
              <Download className="w-3 h-3" /> Export
            </button>
         </div>
+        <button 
+          onClick={onResetProject}
+          className="w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-rose-200 text-[11px] font-black uppercase tracking-widest transition-all mt-2"
+        >
+          <RefreshCw className="w-4 h-4" /> Reset Project
+        </button>
       </div>
     </aside>
   );

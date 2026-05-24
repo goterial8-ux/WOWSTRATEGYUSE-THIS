@@ -11,6 +11,7 @@ interface RightPanelProps {
   updateStageContent: (content: string) => void;
   onGenerate: () => void;
   onApproveAndLock: () => void;
+  onUnlockStage: () => void;
   onSendToNext: () => void;
   exportSettings: CleanExportSettings;
   updateExportSettings: (updates: Partial<CleanExportSettings>) => void;
@@ -19,6 +20,11 @@ interface RightPanelProps {
   updateScriptPart: (index: number, partial: Partial<ScriptPart>) => void;
   onInitScriptParts: () => void;
   onGeneratePart: (index: number) => void;
+  onGenerateAllParts: () => void;
+  onStopBatchGeneration: () => void;
+  onClearAllParts: () => void;
+  onClearPart: (index: number) => void;
+  isBatchGenerating: boolean;
   onCheckPart: (index: number) => void;
   onAssembleScript: () => void;
 }
@@ -31,6 +37,7 @@ export function RightPanel({
   updateStageContent,
   onGenerate, 
   onApproveAndLock, 
+  onUnlockStage,
   onSendToNext,
   exportSettings,
   updateExportSettings,
@@ -38,6 +45,11 @@ export function RightPanel({
   updateScriptPart,
   onInitScriptParts,
   onGeneratePart,
+  onGenerateAllParts,
+  onStopBatchGeneration,
+  onClearAllParts,
+  onClearPart,
+  isBatchGenerating,
   onCheckPart,
   onAssembleScript
 }: RightPanelProps) {
@@ -84,12 +96,20 @@ export function RightPanel({
               )}
 
               {stageStatus === 'locked' && (
-                <button 
-                  onClick={onSendToNext}
-                  className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 border-none text-xs font-semibold transition-all shadow-sm flex items-center gap-2"
-                >
-                  Next Stage &rarr;
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={onUnlockStage}
+                    className="px-4 py-2 bg-white text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
+                  >
+                    Unlock to edit
+                  </button>
+                  <button 
+                    onClick={onSendToNext}
+                    className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 border-none text-xs font-semibold transition-all shadow-sm flex items-center gap-2"
+                  >
+                    Next Stage &rarr;
+                  </button>
+                </div>
               )}
             </>
           )}
@@ -114,12 +134,20 @@ export function RightPanel({
                     </button>
                   )}
                   {stageStatus === 'locked' && (
-                    <button 
-                      onClick={onSendToNext}
-                      className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 border-none text-xs font-semibold transition-all shadow-sm flex items-center gap-2"
-                    >
-                      Next Stage &rarr;
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button 
+                        onClick={onUnlockStage}
+                        className="px-4 py-2 bg-white text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold uppercase tracking-wider transition-all shadow-sm"
+                      >
+                        Unlock script
+                      </button>
+                      <button 
+                        onClick={onSendToNext}
+                        className="px-4 py-2 bg-slate-900 text-white hover:bg-slate-800 border-none text-xs font-semibold transition-all shadow-sm flex items-center gap-2"
+                      >
+                        Next Stage &rarr;
+                      </button>
+                    </div>
                   )}
                 </>
               )}
@@ -181,6 +209,11 @@ export function RightPanel({
              parts={scriptParts}
              updatePart={updateScriptPart}
              onGeneratePart={onGeneratePart}
+             onGenerateAllParts={onGenerateAllParts}
+             onStopBatchGeneration={onStopBatchGeneration}
+             onClearAllParts={onClearAllParts}
+             onClearPart={onClearPart}
+             isBatchGenerating={isBatchGenerating}
              onCheckPart={onCheckPart}
              onAssembleScript={onAssembleScript}
              stageStatus={stageStatus}
